@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NIKE — Just Do It. 3D Experience</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Oswald:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --nike-black: #111111;
+            --nike-white: #ffffff;
+            --nike-red: #e31e24;
+            --nike-orange: #ff6600;
+            --nike-gray: #f5f5f5;
+            --nike-dark-gray: #2d2d2d;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--nike-black);
+            color: var(--nike-white);
+            overflow-x: hidden;
+            cursor: none; /* Custom Cursor */
+        }
+
+        /* Custom Cursor */
+        .cursor { width: 24px; height: 24px; border: 2px solid var(--nike-white); border-radius: 50%; position: fixed; pointer-events: none; z-index: 9999; transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease; mix-blend-mode: difference; }
+        .cursor.hover { transform: scale(2.5); background: var(--nike-white); }
+        .cursor.click { transform: scale(0.8); }
+        .cursor-dot { width: 6px; height: 6px; background: var(--nike-white); border-radius: 50%; position: fixed; pointer-events: none; z-index: 9999; mix-blend-mode: difference; }
+
+        /* Navigation */
+        .nav { position: fixed; top: 0; left: 0; width: 100%; z-index: 1000; padding: 20px 50px; display: flex; justify-content: space-between; align-items: center; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); }
+        .nav.scrolled { background: rgba(17, 17, 17, 0.95); backdrop-filter: blur(30px) saturate(180%); padding: 12px 50px; box-shadow: 0 4px 30px rgba(0,0,0,0.3); }
+        .nav-logo { font-family: 'Oswald', sans-serif; font-size: 2rem; font-weight: 700; letter-spacing: 3px; color: var(--nike-white); text-decoration: none; position: relative; transition: all 0.3s ease; }
+        .nav-logo:hover { letter-spacing: 5px; }
+        .nav-logo::after { content: ''; position: absolute; bottom: -5px; left: 50%; width: 0; height: 2px; background: var(--nike-red); transition: all 0.3s ease; transform: translateX(-50%); }
+        .nav-logo:hover::after { width: 100%; }
+        .nav-links { display: flex; gap: 40px; list-style: none; }
+        .nav-links a { color: var(--nike-white); text-decoration: none; font-size: 0.85rem; font-weight: 500; letter-spacing: 1px; text-transform: uppercase; position: relative; padding: 5px 0; transition: color 0.3s ease; }
+        .nav-links a::after { content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 1px; background: var(--nike-white); transition: width 0.3s ease; }
+        .nav-links a:hover::after { width: 100%; }
+        .nav-icons { display: flex; gap: 25px; align-items: center; }
+        .nav-icon { width: 24px; height: 24px; cursor: pointer; transition: all 0.3s ease; position: relative; }
+        .nav-icon:hover { transform: scale(1.2) rotate(5deg); }
+        .nav-icon .badge { position: absolute; top: -5px; right: -5px; width: 16px; height: 16px; background: var(--nike-red); border-radius: 50%; font-size: 0.6rem; display: flex; align-items: center; justify-content: center; font-weight: 700; opacity: 0; transform: scale(0); transition: all 0.3s ease; }
+        .nav-icon .badge.show { opacity: 1; transform: scale(1); }
+
+        /* Hero Section */
+        .hero { height: 100vh; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        #hero-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        .hero-content { position: relative; z-index: 10; text-align: center; pointer-events: none; }
+        .hero-subtitle { font-size: 0.9rem; letter-spacing: 8px; text-transform: uppercase; color: rgba(255,255,255,0.6); margin-bottom: 20px; opacity: 0; transform: translateY(30px); }
+        .hero-title { font-family: 'Oswald', sans-serif; font-size: clamp(4rem, 12vw, 10rem); font-weight: 700; line-height: 0.9; letter-spacing: -2px; text-transform: uppercase; margin-bottom: 30px; opacity: 0; transform: translateY(50px); }
+        .hero-title span { display: block; background: linear-gradient(135deg, #ffffff 0%, #888888 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero-title .accent { background: linear-gradient(135deg, #e31e24 0%, #ff6600 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hero-desc { font-size: 1.1rem; color: rgba(255,255,255,0.7); max-width: 500px; margin: 0 auto 40px; line-height: 1.6; opacity: 0; transform: translateY(30px); }
+        .hero-cta { display: inline-flex; align-items: center; gap: 15px; background: var(--nike-white); color: var(--nike-black); padding: 18px 45px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 0.9rem; letter-spacing: 1px; text-transform: uppercase; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); opacity: 0; transform: translateY(30px); pointer-events: auto; position: relative; overflow: hidden; }
+        .hero-cta:hover { background: var(--nike-red); color: var(--nike-white); transform: translateY(-3px); box-shadow: 0 20px 40px rgba(227, 30, 36, 0.4); }
+        .hero-cta:hover svg { transform: translateX(5px); }
+        
+        .scroll-indicator { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 10px; opacity: 0; cursor: pointer; pointer-events: auto; }
+        .scroll-indicator span { font-size: 0.7rem; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.5); }
+        .scroll-line { width: 1px; height: 60px; background: linear-gradient(to bottom, var(--nike-white), transparent); animation: scrollPulse 2s ease-in-out infinite; }
+        @keyframes scrollPulse { 0%, 100% { opacity: 0.3; transform: scaleY(0.5); } 50% { opacity: 1; transform: scaleY(1); } }
+
+        /* Section Styles */
+        .section { position: relative; padding: 120px 50px; }
+        .section-header { text-align: center; margin-bottom: 80px; }
+        .section-label { font-size: 0.8rem; letter-spacing: 6px; text-transform: uppercase; color: var(--nike-red); margin-bottom: 15px; display: block; }
+        .section-title { font-family: 'Oswald', sans-serif; font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 700; text-transform: uppercase; line-height: 1; }
+
+        /* Shoe Showcase */
+        .showcase { min-height: 100vh; display: flex; align-items: center; position: relative; overflow: hidden; padding: 80px 0; }
+        .showcase-wrapper { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; max-width: 1400px; margin: 0 auto; width: 100%; align-items: center; }
+        .showcase-image { position: relative; perspective: 1000px; display: flex; justify-content: center; align-items: center; }
+        .showcase-img-container { position: relative; width: 100%; max-width: 600px; transform-style: preserve-3d; transition: transform 0.1s ease-out; }
+        .showcase-img { width: 100%; height: auto; filter: drop-shadow(0 40px 80px rgba(0,0,0,0.5)); transform-style: preserve-3d; transition: filter 0.5s ease; }
+        
+        .showcase-glow { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 400px; height: 400px; border-radius: 50%; filter: blur(120px); opacity: 0.3; z-index: -1; transition: background 0.8s ease; }
+        .showcase-info { padding: 20px; }
+        .showcase-category { font-size: 0.8rem; letter-spacing: 4px; text-transform: uppercase; color: var(--nike-red); margin-bottom: 15px; display: block; font-weight: 600; }
+        .showcase-name { font-family: 'Oswald', sans-serif; font-size: clamp(2.5rem, 5vw, 4.5rem); font-weight: 700; text-transform: uppercase; line-height: 1; margin-bottom: 20px; }
+        .showcase-desc { font-size: 1rem; color: rgba(255,255,255,0.6); line-height: 1.8; margin-bottom: 30px; max-width: 450px; }
+        .showcase-price { font-family: 'Oswald', sans-serif; font-size: 2.5rem; font-weight: 700; margin-bottom: 10px; display: flex; align-items: center; gap: 15px; }
+        .showcase-price .original { font-size: 1.2rem; color: rgba(255,255,255,0.3); text-decoration: line-through; }
+        .showcase-price .discount { font-size: 0.8rem; background: var(--nike-red); color: white; padding: 4px 10px; border-radius: 20px; font-weight: 600; }
+        
+        /* Buttons */
+        .showcase-actions { display: flex; gap: 20px; flex-wrap: wrap; margin-top: 30px; }
+        .btn-primary { background: var(--nike-white); color: var(--nike-black); padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase; border: none; cursor: pointer; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); display: inline-flex; align-items: center; gap: 10px; }
+        .btn-primary:hover { background: var(--nike-red); color: var(--nike-white); transform: translateY(-3px); box-shadow: 0 15px 35px rgba(227, 30, 36, 0.3); }
+        .btn-secondary { background: transparent; color: var(--nike-white); padding: 16px 40px; border-radius: 50px; text-decoration: none; font-weight: 600; font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase; border: 1px solid rgba(255,255,255,0.3); cursor: pointer; transition: all 0.4s cubic-bezier(0.23, 1, 0.32, 1); }
+        .btn-secondary:hover { border-color: var(--nike-white); background: rgba(255,255,255,0.1); transform: translateY(-3px); }
+
+        /* Selectors */
+        .size-selector { margin-top: 25px; }
+        .size-label { font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-bottom: 12px; display: block; }
+        .size-options { display: flex; gap: 10px; flex-wrap: wrap; }
+        .size-btn { width: 50px; height: 50px; border: 1px solid rgba(255,255,255,0.2); background: transparent; color: var(--nike-white); border-radius: 12px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; }
+        .size-btn:hover { border-color: var(--nike-white); background: rgba(255,255,255,0.1); }
+        .size-btn.active { background: var(--nike-white); color: var(--nike-black); border-color: var(--nike-white); }
+        .size-btn.disabled { opacity: 0.3; cursor: not-allowed; text-decoration: line-through; }
+
+        .color-options { display: flex; gap: 15px; margin-top: 25px; align-items: center; }
+        .color-label { font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.5); margin-right: 10px; }
+        .color-dot { width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: all 0.4s ease; position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .color-dot.active { border-color: var(--nike-white); transform: scale(1.15); box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+        .color-dot:hover { transform: scale(1.1); }
+        .color-name { margin-left: 10px; font-size: 0.85rem; color: rgba(255,255,255,0.7); font-weight: 500; min-width: 80px; }
+
+        .showcase:nth-child(even) .showcase-wrapper { direction: rtl; }
+        .showcase:nth-child(even) .showcase-info { direction: ltr; text-align: right; }
+        .showcase:nth-child(even) .showcase-desc { margin-left: auto; }
+        .showcase:nth-child(even) .showcase-actions, .showcase:nth-child(even) .color-options, .showcase:nth-child(even) .size-options { justify-content: flex-end; }
+
+        /* Stats Bar & Components */
+        .stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 30px; max-width: 1200px; margin: 0 auto 100px; padding: 0 50px; }
+        .stat-item { text-align: center; padding: 40px 20px; border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; background: rgba(255,255,255,0.02); transition: all 0.4s; }
+        .stat-item:hover { border-color: rgba(255,255,255,0.3); transform: translateY(-8px); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .stat-number { font-family: 'Oswald', sans-serif; font-size: 3rem; font-weight: 700; color: var(--nike-white); margin-bottom: 10px; }
+        .stat-item:hover .stat-number { color: var(--nike-red); transform: scale(1.1); }
+        .stat-label { font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,0.5); }
+
+        /* Modals & Toasts */
+        .toast-container { position: fixed; top: 100px; right: 30px; z-index: 10000; display: flex; flex-direction: column; gap: 15px; pointer-events: none; }
+        .toast { background: rgba(26, 26, 26, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 20px 25px; display: flex; align-items: center; gap: 15px; min-width: 320px; transform: translateX(400px); opacity: 0; transition: all 0.5s cubic-bezier(0.23, 1, 0.32, 1); pointer-events: auto; }
+        .toast.show { transform: translateX(0); opacity: 1; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 9998; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: all 0.4s ease; }
+        .modal-overlay.active { opacity: 1; visibility: visible; }
+        .modal { background: #1a1a1a; border-radius: 30px; padding: 50px; max-width: 500px; width: 90%; text-align: center; transform: scale(0.9) translateY(20px); transition: all 0.4s; border: 1px solid rgba(255,255,255,0.1); }
+        .modal-overlay.active .modal { transform: scale(1) translateY(0); }
+        .modal-icon { width: 80px; height: 80px; background: linear-gradient(135deg, var(--nike-red), var(--nike-orange)); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 25px; }
+        .modal h3 { font-family: 'Oswald', sans-serif; font-size: 1.8rem; margin-bottom: 10px; text-transform: uppercase; }
+        .modal p { color: rgba(255,255,255,0.6); margin-bottom: 30px; }
+        
+        /* Wishlist Heart */
+        .wishlist-btn { background: none; border: none; cursor: pointer; padding: 10px; transition: all 0.3s ease; }
+        .wishlist-btn svg { width: 24px; height: 24px; fill: none; stroke: var(--nike-white); stroke-width: 2; transition: all 0.3s ease; }
+        .wishlist-btn.active svg { fill: var(--nike-red); stroke: var(--nike-red); animation: heartBeat 0.4s ease; }
+        @keyframes heartBeat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.3); } }
+
+        /* Animation Classes */
+        .img-transition { animation: imgSwap 0.6s cubic-bezier(0.23, 1, 0.32, 1); }
+        @keyframes imgSwap { 
+            0% { transform: scale(1) rotateY(0); opacity: 1; } 
+            50% { transform: scale(0.8) rotateY(90deg); opacity: 0; } 
+            100% { transform: scale(1) rotateY(0); opacity: 1; } 
+        }
+
+        /* Loading Screen & Globals */
+        .loading-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--nike-black); z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.8s ease, visibility 0.8s ease; }
+        .loading-screen.hidden { opacity: 0; visibility: hidden; }
+        .loading-logo { font-family: 'Oswald', sans-serif; font-size: 3rem; font-weight: 700; letter-spacing: 8px; margin-bottom: 30px; animation: pulse 1.5s infinite; }
+        .loading-bar { width: 200px; height: 2px; background: rgba(255,255,255,0.1); overflow: hidden; }
+        .loading-progress { height: 100%; background: linear-gradient(90deg, var(--nike-red), var(--nike-orange)); width: 0%; animation: loadProgress 2s forwards; }
+        
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        @keyframes loadProgress { 0% { width: 0%; } 100% { width: 100%; } }
+        
+        .glow-red { background: radial-gradient(circle, rgba(227,30,36,0.5), transparent 70%); }
+        .glow-orange { background: radial-gradient(circle, rgba(255,102,0,0.5), transparent 70%); }
+        .glow-green { background: radial-gradient(circle, rgba(52,168,83,0.5), transparent 70%); }
+        .glow-blue { background: radial-gradient(circle, rgba(66,133,244,0.5), transparent 70%); }
+        .glow-white { background: radial-gradient(circle, rgba(255,255,255,0.3), transparent 70%); }
+        .glow-black { background: radial-gradient(circle, rgba(50,50,50,0.8), transparent 70%); }
+        
+        .parallax-bg { position: absolute; font-family: 'Oswald', sans-serif; font-size: 20vw; font-weight: 700; color: rgba(255,255,255,0.02); z-index: 0; pointer-events: none; }
+        .product-tag { position: absolute; top: 20px; right: 20px; background: linear-gradient(135deg, var(--nike-red), var(--nike-orange)); color: white; padding: 8px 16px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; z-index: 5; }
+        
+        .rating { display: flex; gap: 3px; margin-bottom: 15px; align-items: center; }
+        .rating svg { width: 16px; height: 16px; fill: #ffd700; }
+        .rating svg.empty { fill: rgba(255,255,255,0.2); }
+        .rating-text { margin-left: 8px; font-size: 0.85rem; color: rgba(255,255,255,0.6); }
+
+        /* Gallery */
+        .gallery { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; max-width: 1400px; margin: 100px auto; padding: 0 50px; }
+        .gallery-item { position: relative; border-radius: 20px; overflow: hidden; aspect-ratio: 1; cursor: pointer; transition: all 0.5s; }
+        .gallery-item:nth-child(2) { grid-row: span 2; aspect-ratio: auto; }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s; }
+        .gallery-item:hover { transform: scale(1.02); z-index: 10; box-shadow: 0 30px 60px rgba(0,0,0,0.4); }
+        .gallery-item:hover img { transform: scale(1.1); }
+        .gallery-overlay { position: absolute; bottom: 0; left: 0; right: 0; padding: 30px; background: linear-gradient(to top, rgba(0,0,0,0.9), transparent); transform: translateY(100%); transition: transform 0.5s; }
+        .gallery-item:hover .gallery-overlay { transform: translateY(0); }
+        .gallery-overlay h3 { font-family: 'Oswald', sans-serif; font-size: 1.5rem; text-transform: uppercase; margin-bottom: 5px; }
+        
+        /* Footer */
+        .footer { background: #0a0a0a; padding: 80px 50px 40px; margin-top: 50px; }
+        .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 60px; max-width: 1400px; margin: 0 auto; }
+        .footer-brand { font-family: 'Oswald', sans-serif; font-size: 2.5rem; font-weight: 700; margin-bottom: 20px; }
+        .footer-desc { color: rgba(255,255,255,0.5); line-height: 1.8; max-width: 300px; margin-bottom: 30px; }
+        .footer-column h4 { font-size: 0.9rem; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 25px; color: var(--nike-white); }
+        .footer-column ul { list-style: none; }
+        .footer-column li { margin-bottom: 15px; }
+        .footer-column a { color: rgba(255,255,255,0.5); text-decoration: none; font-size: 0.9rem; transition: all 0.3s ease; }
+        .footer-column a:hover { color: var(--nike-white); }
+        .footer-bottom { max-width: 1400px; margin: 60px auto 0; padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .footer-bottom p { color: rgba(255,255,255,0.4); font-size: 0.8rem; }
+    </style>
+</head>
+<body>
+
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-logo">NIKE</div>
+        <div class="loading-bar"><div class="loading-progress"></div></div>
+    </div>
+
+    <div class="cursor" id="cursor"></div>
+    <div class="cursor-dot" id="cursorDot"></div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-icon">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3">
+                    <path d="M20 6L9 17l-5-5"/>
+                </svg>
+            </div>
+            <h3 id="modalTitle">Added to Bag!</h3>
+            <p id="modalDesc">Your item has been successfully added to your shopping bag.</p>
+            <button class="btn-primary" onclick="closeModal()">Continue Shopping</button>
+        </div>
+    </div>
+
+    <nav class="nav" id="navbar">
+        <a href="#" class="nav-logo" onclick="window.scrollTo(0,0)">NIKE</a>
+        <ul class="nav-links">
+            <li><a href="#showcase">New & Featured</a></li>
+            <li><a href="#showcase">Men</a></li>
+            <li><a href="#showcase">Women</a></li>
+            <li><a href="#showcase">Kids</a></li>
+            <li><a href="#showcase">Sale</a></li>
+        </ul>
+        <div class="nav-icons">
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="showToast('Search coming soon!', 'Try browsing.')">
+                <circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="showToast('Wishlist', 'Your saved items.')">
+                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" onclick="showToast('Shopping Bag', 'Checkout your items.')">
+                <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <path d="M16 10a4 4 0 0 1-8 0"></path>
+                <span class="badge" id="cartBadge">0</span>
+            </svg>
+        </div>
+    </nav>
+
+    <section class="hero" id="hero">
+        <canvas id="hero-canvas"></canvas>
+
+        <div class="hero-content">
+            <div class="hero-subtitle">The Future of Flight</div>
+            <h1 class="hero-title">
+                <span>JUST</span>
+                <span class="accent">DO IT.</span>
+            </h1>
+            <p class="hero-desc">Experience the revolution. Where innovation meets iconic design. Every step, a statement. Every stride, legendary.</p>
+            <a href="#showcase" class="hero-cta magnetic">
+                Explore Collection
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+            </a>
+        </div>
+    </section>
+
+    <div class="stats-bar" id="stats">
+        <div class="stat-item"><div class="stat-number" data-target="50">0</div><div class="stat-label">Years of Innovation</div></div>
+        <div class="stat-item"><div class="stat-number" data-target="170">0</div><div class="stat-label">Countries Worldwide</div></div>
+        <div class="stat-item"><div class="stat-number" data-target="79000">0</div><div class="stat-label">Employees Globally</div></div>
+        <div class="stat-item"><div class="stat-number" data-target="1000">0</div><div class="stat-label">Iconic Designs</div></div>
+    </div>
+
+    <section class="section" id="showcase">
+        <div class="section-header">
+            <span class="section-label">The Collection</span>
+            <h2 class="section-title">Iconic Kicks</h2>
+        </div>
+
+        <div class="showcase" id="jordan1">
+            <div class="parallax-bg" style="top: 10%; left: -10%;">JORDAN</div>
+            <div class="showcase-wrapper">
+                <div class="showcase-image">
+                    <div class="showcase-glow glow-red" id="glow1"></div>
+                    <div class="showcase-img-container" onmousemove="tiltEffect(event, this)" onmouseleave="resetTilt(this)">
+                        <span class="product-tag">Best Seller</span>
+                        <img src="https://kimi-web-img.moonshot.cn/img/crepdogcrew.com/a055856c14b810811a20afd56cc08e7237a64f6e.jpg" 
+                             alt="Air Jordan 1" class="showcase-img" id="shoe1">
+                    </div>
+                </div>
+                <div class="showcase-info">
+                    <span class="showcase-category">Basketball Heritage</span>
+                    <h3 class="showcase-name">Air Jordan 1</h3>
+                    <div class="rating">
+                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24" class="empty"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <span class="rating-text">4.8 (2,341 reviews)</span>
+                    </div>
+                    <p class="showcase-desc">The shoe that started it all. Returns with premium materials and the iconic colorway. A timeless silhouette that transcends the court.</p>
+                    <div class="showcase-price">$180 <span class="original">$200</span> <span class="discount">-10%</span></div>
+                    
+                    <div class="size-selector">
+                        <span class="size-label">Select Size</span>
+                        <div class="size-options">
+                            <button class="size-btn" onclick="selectSize(this)">7</button>
+                            <button class="size-btn active" onclick="selectSize(this)">8</button>
+                            <button class="size-btn" onclick="selectSize(this)">9</button>
+                            <button class="size-btn disabled">10.5</button>
+                            <button class="size-btn" onclick="selectSize(this)">11</button>
+                        </div>
+                    </div>
+
+                    <div class="color-options">
+                        <span class="color-label">Color:</span>
+                        <div class="color-dot active" style="background: #e31e24;" data-shoe="1" data-color="red" data-name="Chicago Red" onclick="changeColor(this)"></div>
+                        <div class="color-dot" style="background: #1a1a1a;" data-shoe="1" data-color="black" data-name="Shadow Black" onclick="changeColor(this)"></div>
+                        <div class="color-dot" style="background: #4169e1;" data-shoe="1" data-color="blue" data-name="Royal Blue" onclick="changeColor(this)"></div>
+                        <span class="color-name" id="colorName1">Chicago Red</span>
+                    </div>
+
+                    <div class="showcase-actions">
+                        <button class="btn-primary" onclick="addToBag('Air Jordan 1')">Add to Bag</button>
+                        <button class="btn-secondary" onclick="showToast('Details', 'Premium leather upper with air sole cushioning.')">View Details</button>
+                        <button class="wishlist-btn" onclick="toggleWishlist(this)"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="showcase" id="dunk">
+            <div class="parallax-bg" style="top: 50%; left: -15%;">DUNK</div>
+            <div class="showcase-wrapper">
+                <div class="showcase-image">
+                    <div class="showcase-glow glow-green" id="glow3"></div>
+                    <div class="showcase-img-container" onmousemove="tiltEffect(event, this)" onmouseleave="resetTilt(this)">
+                        <span class="product-tag" style="background: linear-gradient(135deg, #228b22, #34a853);">Trending</span>
+                        <img src="https://kimi-web-img.moonshot.cn/img/mir-s3-cdn-cf.behance.net/5f7880e1c127ad0e9e1cdb615d7d91d70cd3a292.jpg" 
+                             alt="Nike Dunk" class="showcase-img" id="shoe3">
+                    </div>
+                </div>
+                <div class="showcase-info">
+                    <span class="showcase-category">Skate Culture</span>
+                    <h3 class="showcase-name">Nike Dunk Low</h3>
+                    <div class="rating">
+                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                        <span class="rating-text">4.9 (4,120 reviews)</span>
+                    </div>
+                    <p class="showcase-desc">Created for the hardwood but taken to the streets, the Nike Dunk Low Retro returns with crisp overlays and original team colors.</p>
+                    <div class="showcase-price">$115</div>
+                    
+                    <div class="size-selector">
+                        <span class="size-label">Select Size</span>
+                        <div class="size-options">
+                            <button class="size-btn" onclick="selectSize(this)">8</button>
+                            <button class="size-btn active" onclick="selectSize(this)">9</button>
+                            <button class="size-btn" onclick="selectSize(this)">10</button>
+                            <button class="size-btn" onclick="selectSize(this)">11</button>
+                        </div>
+                    </div>
+
+                    <div class="color-options">
+                        <span class="color-label">Color:</span>
+                        <div class="color-dot active" style="background: #228b22;" data-shoe="3" data-color="green" data-name="Pine Green" onclick="changeColor(this)"></div>
+                        <div class="color-dot" style="background: #ff6600;" data-shoe="3" data-color="orange" data-name="Syracuse Orange" onclick="changeColor(this)"></div>
+                        <div class="color-dot" style="background: #ffffff;" data-shoe="3" data-color="white" data-name="Panda White" onclick="changeColor(this)"></div>
+                        <span class="color-name" id="colorName3">Pine Green</span>
+                    </div>
+
+                    <div class="showcase-actions">
+                        <button class="btn-primary" onclick="addToBag('Nike Dunk Low')">Add to Bag</button>
+                        <button class="btn-secondary" onclick="showToast('Details', 'Classic hoops design channeled back onto the streets.')">View Details</button>
+                        <button class="wishlist-btn" onclick="toggleWishlist(this)"><svg viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path></svg></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="section" style="padding-top: 0;">
+        <div class="section-header">
+            <span class="section-label">Lookbook</span>
+            <h2 class="section-title">On The Streets</h2>
+        </div>
+        <div class="gallery">
+            <div class="gallery-item">
+                <img src="https://images.unsplash.com/photo-1514989940723-e8e51635b782?q=80&w=1000&auto=format&fit=crop" alt="Lookbook 1">
+                <div class="gallery-overlay">
+                    <h3>Urban Run</h3>
+                    <p>Downtown Collection</p>
+                </div>
+            </div>
+            <div class="gallery-item">
+                <img src="https://images.unsplash.com/photo-1608231387042-66d1773070a5?q=80&w=1000&auto=format&fit=crop" alt="Lookbook 2">
+                <div class="gallery-overlay">
+                    <h3>Air Force Heritage</h3>
+                    <p>Classic White Edition</p>
+                </div>
+            </div>
+            <div class="gallery-item">
+<img src="https://www.hypeelixir.com/cdn/shop/products/920714_01.jpg_1_1024x1024_2x_88db04ba-59bb-4413-8c31-129b3cdfdadd.jpg" alt="Jordan 1 Retro Chicago" class="product-image">
+                <div class="gallery-overlay">
+                    <h3>Jordan Retro</h3>
+                    <p>Court to Street</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <div class="footer-grid">
+            <div>
+                <div class="footer-brand">NIKE</div>
+                <p class="footer-desc">Bringing inspiration and innovation to every athlete* in the world. *If you have a body, you are an athlete.</p>
+            </div>
+            <div class="footer-column">
+                <h4>Products</h4>
+                <ul>
+                    <li><a href="#">Shoes</a></li>
+                    <li><a href="#">Clothing</a></li>
+                    <li><a href="#">Accessories</a></li>
+                    <li><a href="#">New Releases</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>Support</h4>
+                <ul>
+                    <li><a href="#">Order Status</a></li>
+                    <li><a href="#">Shipping & Delivery</a></li>
+                    <li><a href="#">Returns</a></li>
+                    <li><a href="#">Contact Us</a></li>
+                </ul>
+            </div>
+            <div class="footer-column">
+                <h4>About</h4>
+                <ul>
+                    <li><a href="#">News</a></li>
+                    <li><a href="#">Careers</a></li>
+                    <li><a href="#">Investors</a></li>
+                    <li><a href="#">Sustainability</a></li>
+                </ul>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2026 Nike, Inc. All Rights Reserved</p>
+            <div style="display:flex; gap:20px;">
+                <a href="#" style="color:#666; text-decoration:none; font-size:0.8rem;">Guides</a>
+                <a href="#" style="color:#666; text-decoration:none; font-size:0.8rem;">Terms of Sale</a>
+                <a href="#" style="color:#666; text-decoration:none; font-size:0.8rem;">Privacy Policy</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // --- 1. LOADING SCREEN ---
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                document.getElementById('loadingScreen').classList.add('hidden');
+                initGSAP();
+            }, 2000);
+        });
+
+        // --- 2. CUSTOM CURSOR ---
+        const cursor = document.getElementById('cursor');
+        const cursorDot = document.getElementById('cursorDot');
+        
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.transform = `translate(${e.clientX - 12}px, ${e.clientY - 12}px)`;
+            cursorDot.style.transform = `translate(${e.clientX - 3}px, ${e.clientY - 3}px)`;
+        });
+
+        document.querySelectorAll('a, button, .color-dot, .nav-icon').forEach(el => {
+            el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
+            el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+        });
+        document.addEventListener('mousedown', () => cursor.classList.add('click'));
+        document.addEventListener('mouseup', () => cursor.classList.remove('click'));
+
+        // --- 3. NAVBAR SCROLL ---
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 50) document.getElementById('navbar').classList.add('scrolled');
+            else document.getElementById('navbar').classList.remove('scrolled');
+        });
+
+        // --- 4. INTERACTIVE FUNCTIONS ---
+        // Select Size
+        function selectSize(btn) {
+            if(btn.classList.contains('disabled')) return;
+            const siblings = btn.parentElement.querySelectorAll('.size-btn');
+            siblings.forEach(s => s.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        // Color Swap Logic (Using CSS Hue-Rotate for seamless 3D recoloring)
+        const colorFilters = {
+            'red': 'hue-rotate(0deg)',
+            'blue': 'hue-rotate(220deg)',
+            'green': 'hue-rotate(120deg)',
+            'orange': 'hue-rotate(45deg)',
+            'black': 'grayscale(100%) brightness(0.6)',
+            'white': 'grayscale(100%) brightness(1.5)'
+        };
+
+        function changeColor(dot) {
+            const shoeId = dot.getAttribute('data-shoe');
+            const color = dot.getAttribute('data-color');
+            const name = dot.getAttribute('data-name');
+            
+            // Update active dot
+            dot.parentElement.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+            dot.classList.add('active');
+            
+            // Update Label
+            document.getElementById(`colorName${shoeId}`).innerText = name;
+            
+            // Trigger Image Swap Animation
+            const img = document.getElementById(`shoe${shoeId}`);
+            img.style.animation = 'none';
+            img.offsetHeight; // trigger reflow
+            img.style.animation = 'imgSwap 0.6s cubic-bezier(0.23, 1, 0.32, 1)';
+            
+            // Change color midway through animation
+            setTimeout(() => {
+                img.style.filter = `drop-shadow(0 40px 80px rgba(0,0,0,0.5)) ${colorFilters[color]}`;
+                document.getElementById(`glow${shoeId}`).className = `showcase-glow glow-${color}`;
+            }, 300);
+        }
+
+        // Add to Cart
+        let cartCount = 0;
+        function addToBag(itemName) {
+            cartCount++;
+            document.getElementById('cartBadge').innerText = cartCount;
+            document.getElementById('cartBadge').classList.add('show');
+            
+            document.getElementById('modalTitle').innerText = 'Added to Bag!';
+            document.getElementById('modalDesc').innerText = `${itemName} has been added to your shopping bag.`;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+
+        // Wishlist Toggle
+        function toggleWishlist(btn) {
+            btn.classList.toggle('active');
+            if(btn.classList.contains('active')) {
+                showToast('Wishlist Updated', 'Item added to your favorites.');
+            } else {
+                showToast('Wishlist Updated', 'Item removed from your favorites.');
+            }
+        }
+
+        // Toasts
+        function showToast(title, msg) {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `
+                <div style="background:var(--nike-red); width:4px; height:40px; border-radius:4px;"></div>
+                <div class="toast-content">
+                    <h4 style="margin:0; font-family:'Oswald'; letter-spacing:1px;">${title}</h4>
+                    <p style="margin:4px 0 0 0; font-size:0.8rem; color:#aaa;">${msg}</p>
+                </div>
+            `;
+            container.appendChild(toast);
+            
+            // Trigger animation
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 500);
+            }, 3000);
+        }
+
+        // Mouse Parallax 3D Tilt on Shoes
+        function tiltEffect(event, element) {
+            const rect = element.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            
+            const xPercent = (x / rect.width - 0.5) * 2;
+            const yPercent = (y / rect.height - 0.5) * 2;
+            
+            const rotateX = yPercent * -15; // Max 15 deg tilt
+            const rotateY = xPercent * 15;
+            
+            element.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.05, 1.05, 1.05)`;
+        }
+
+        function resetTilt(element) {
+            element.style.transform = `perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)`;
+        }
+
+        // --- 5. GSAP ANIMATIONS ---
+        function initGSAP() {
+            gsap.registerPlugin(ScrollTrigger);
+
+            // Hero Entrance
+            gsap.to(".hero-subtitle", {y: 0, opacity: 1, duration: 1, delay: 0.2});
+            gsap.to(".hero-title", {y: 0, opacity: 1, duration: 1, delay: 0.4});
+            gsap.to(".hero-desc", {y: 0, opacity: 1, duration: 1, delay: 0.6});
+            gsap.to(".hero-cta", {y: 0, opacity: 1, duration: 1, delay: 0.8});
+            gsap.to(".scroll-indicator", {opacity: 1, duration: 1, delay: 1.2});
+
+            // Stats Counter
+            const stats = document.querySelectorAll('.stat-number');
+            stats.forEach(stat => {
+                const target = parseInt(stat.getAttribute('data-target'));
+                ScrollTrigger.create({
+                    trigger: "#stats",
+                    start: "top 80%",
+                    onEnter: () => {
+                        let count = 0;
+                        const interval = setInterval(() => {
+                            count += Math.ceil(target / 50);
+                            if (count >= target) {
+                                count = target;
+                                clearInterval(interval);
+                            }
+                            // Format number with commas
+                            stat.innerText = count.toLocaleString() + (target > 1000 ? '+' : '');
+                        }, 30);
+                    }
+                });
+            });
+
+            // Animate Showcases on Scroll
+            gsap.utils.toArray('.showcase-wrapper').forEach(showcase => {
+                gsap.from(showcase, {
+                    scrollTrigger: {
+                        trigger: showcase,
+                        start: "top 75%",
+                    },
+                    y: 100,
+                    opacity: 0,
+                    duration: 1,
+                    ease: "power3.out"
+                });
+            });
+        }
+
+        // --- 6. THREE.JS HERO BACKGROUND ---
+        const initThreeJS = () => {
+            const canvas = document.getElementById('hero-canvas');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+            
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+
+            // Create Particle System
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 700;
+            const posArray = new Float32Array(particlesCount * 3);
+
+            for(let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 10;
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            
+            // Stylish white/grey particles
+            const material = new THREE.PointsMaterial({
+                size: 0.015,
+                color: 0xffffff,
+                transparent: true,
+                opacity: 0.4,
+                blending: THREE.AdditiveBlending
+            });
+
+            const particlesMesh = new THREE.Points(particlesGeometry, material);
+            scene.add(particlesMesh);
+
+            camera.position.z = 3;
+
+            // Mouse Interaction for Particles
+            let mouseX = 0;
+            let mouseY = 0;
+            let targetX = 0;
+            let targetY = 0;
+            const windowHalfX = window.innerWidth / 2;
+            const windowHalfY = window.innerHeight / 2;
+
+            document.addEventListener('mousemove', (event) => {
+                mouseX = (event.clientX - windowHalfX);
+                mouseY = (event.clientY - windowHalfY);
+            });
+
+            // Animation Loop
+            const clock = new THREE.Clock();
+
+            const tick = () => {
+                const elapsedTime = clock.getElapsedTime();
+                
+                // Slow rotation
+                particlesMesh.rotation.y = elapsedTime * 0.05;
+                particlesMesh.rotation.x = elapsedTime * 0.02;
+
+                // Mouse follow logic
+                targetX = mouseX * 0.001;
+                targetY = mouseY * 0.001;
+                
+                particlesMesh.rotation.y += 0.05 * (targetX - particlesMesh.rotation.y);
+                particlesMesh.rotation.x += 0.05 * (targetY - particlesMesh.rotation.x);
+
+                renderer.render(scene, camera);
+                window.requestAnimationFrame(tick);
+            };
+
+            tick();
+
+            // Handle Resize
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+        };
+
+        initThreeJS();
+    </script>
+</body>
+</html>
